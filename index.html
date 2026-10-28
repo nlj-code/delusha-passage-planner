@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d2238" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PassPlan" />
+  <meta name="application-name" content="PassPlan" />
+  <meta name="description" content="Mediterranean Passage Planner — Offline water routing, distances and underway times." />
+  <title>Mediterranean Passage Planner</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=3" />
+  <link rel="icon" type="image/png" href="./icon-192.png?v=3" />
+  <link rel="apple-touch-icon" href="./icon-512.png?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Interactive Mercator Chart -->
+    <main id="chart-container" class="chart-area" aria-label="Mediterranean Passage Chart">
+      <canvas id="chart-canvas"></canvas>
+
+      <!-- Top-Right Chart Controls (+, -, FIT) -->
+      <div class="chart-zoom-controls">
+        <button id="btn-zoom-in" type="button" class="chart-ctrl-btn" title="Zoom In" aria-label="Zoom In">+</button>
+        <button id="btn-zoom-out" type="button" class="chart-ctrl-btn" title="Zoom Out" aria-label="Zoom Out">−</button>
+        <button id="btn-fit" type="button" class="chart-ctrl-btn fit-btn" title="Fit Route or Full Mediterranean">FIT</button>
+      </div>
+
+      <!-- Bottom-Left Status & GPS Overlay -->
+      <div class="chart-bottom-bar">
+        <span id="worker-status" class="status-pill">INIT ROUTER…</span>
+        <button id="btn-gps" type="button" class="gps-pill-btn" title="Show live GPS position and add as stop">📍 GPS</button>
+        <button id="btn-theme" type="button" class="theme-pill-btn" title="Toggle Day / Night Chart Theme">DAY</button>
+      </div>
+    </main>
+
+    <!-- Route & Passage Panel -->
+    <aside class="route-panel" aria-label="Passage Planning Controls">
+      <header class="panel-header">
+        <div class="vessel-brand">
+          <h1 class="app-title">MEDITERRANEAN PASSAGE PLANNER</h1>
+        </div>
+      </header>
+
+      <!-- 1. Speed Controls (Compact ~20% smaller) -->
+      <section class="panel-section speed-section">
+        <div class="speed-header-row">
+          <div class="speed-label-group">
+            <span class="section-heading">SPEED OVER GROUND</span>
+            <div id="speed-readout" class="speed-readout mono">8.0 kn</div>
+          </div>
+          <div class="speed-input-group">
+            <label for="speed-input" class="sr-only">Speed in knots (1 to 25)</label>
+            <input id="speed-input" type="number" class="speed-number-box mono" min="1" max="25" step="0.5" value="8" />
+            <span class="unit-label">kn</span>
+          </div>
+        </div>
+
+        <input id="speed-slider" type="range" class="speed-slider" min="3" max="16" step="0.5" value="8" aria-label="Speed slider 3 to 16 knots" />
+
+        <div class="speed-presets-row">
+          <span class="presets-caption">Cruising presets:</span>
+          <div class="preset-btn-group">
+            <button type="button" class="preset-btn mono" data-speed="6">6 kn</button>
+            <button type="button" class="preset-btn mono active" data-speed="8">8 kn</button>
+            <button type="button" class="preset-btn mono" data-speed="10">10 kn</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Totals Tiles -->
+      <section class="panel-section totals-grid" aria-label="Passage Totals">
+        <div class="total-tile">
+          <span class="tile-label">TOTAL DISTANCE</span>
+          <div class="tile-value-row">
+            <span id="tile-total-nm" class="tile-value mono">0</span>
+            <span class="tile-unit">nm</span>
+          </div>
+        </div>
+        <div class="total-tile">
+          <span class="tile-label">TIME UNDERWAY</span>
+          <div class="tile-value-row">
+            <span id="tile-total-time" class="tile-value mono">0h 0m</span>
+          </div>
+        </div>
+        <div class="total-tile">
+          <span class="tile-label">LEGS</span>
+          <div class="tile-value-row">
+            <span id="tile-total-legs" class="tile-value mono">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Legs Table -->
+      <section class="panel-section legs-section">
+        <div class="legs-header-bar">
+          <span class="section-heading">ITINERARY &amp; LEGS</span>
+          <label id="corinth-toggle-wrap" class="canal-toggle-label" title="Allow routing through the Corinth Canal" style="display: none;">
+            <input id="toggle-corinth" type="checkbox" />
+            <span>Corinth Canal</span>
+          </label>
+        </div>
+
+        <div class="legs-table-wrap">
+          <table class="legs-table">
+            <thead>
+              <tr>
+                <th class="col-stop">STOP / POSITION</th>
+                <th class="col-dist">DIST</th>
+                <th class="col-time">TIME</th>
+                <th class="col-remove" aria-label="Remove"></th>
+              </tr>
+            </thead>
+            <tbody id="legs-tbody"></tbody>
+          </table>
+          <div id="legs-empty" class="legs-empty-state">
+            Tap any port or open sea on the chart—or choose a port below—to start plotting your passage.
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Route Controls -->
+      <section class="panel-section route-controls-row">
+        <button id="btn-undo" type="button" class="ctrl-action-btn" disabled>Undo last</button>
+        <button id="btn-reverse" type="button" class="ctrl-action-btn" disabled>Reverse</button>
+        <button id="btn-clear" type="button" class="ctrl-action-btn danger-btn" disabled>Clear route</button>
+      </section>
+
+      <!-- 5. Add Port Dropdown -->
+      <section class="panel-section add-port-section">
+        <label for="port-select" class="section-heading">ADD PRESET PORT (66 MEDITERRANEAN PORTS)</label>
+        <select id="port-select" class="port-dropdown"></select>
+      </section>
+
+      <!-- 6. Disclaimer Footer -->
+      <footer class="panel-disclaimer">
+        <strong>PLANNING ONLY — NOT FOR NAVIGATION.</strong> Routes keep ~1.0 nm off the coast, closing in only through narrow straits and harbour approaches; tap open sea to add waypoints and force a track. Do not use for collision avoidance or pilotage—always check against your vessel chartplotter.
+      </footer>
+    </aside>
+  </div>
+
+  <script src="./coastline-data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

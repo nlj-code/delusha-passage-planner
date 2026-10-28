@@ -1,0 +1,630 @@
+/* Mediterranean Passage Planner (PassPlan) — Chart-Table (Day) & Night-Chart (Night) Styles */
+
+:root,
+html[data-theme="light"] {
+  --bg-panel: #f7f4ec;
+  --bg-card: #eee9dc;
+  --bg-input: #ffffff;
+  --border-color: #d4cab4;
+  --border-strong: #b8ab90;
+  --text-primary: #0f2537;
+  --text-secondary: #3b5368;
+  --text-muted: #64788a;
+  --accent-orange: #ea580c;
+  --accent-orange-soft: rgba(234, 88, 12, 0.14);
+  --accent-teal: #0d9488;
+  --accent-teal-soft: rgba(13, 148, 136, 0.15);
+  --danger-color: #b91c1c;
+  --ctrl-bg: rgba(247, 244, 236, 0.92);
+  --ctrl-border: #8b7759;
+  --shadow-sm: 0 2px 6px rgba(15, 37, 55, 0.12);
+}
+
+html[data-theme="dark"] {
+  --bg-panel: #0f1c2e;
+  --bg-card: #16263d;
+  --bg-input: #1e324f;
+  --border-color: #293e5c;
+  --border-strong: #3b5578;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-orange: #fb923c;
+  --accent-orange-soft: rgba(251, 146, 60, 0.18);
+  --accent-teal: #2dd4bf;
+  --accent-teal-soft: rgba(45, 212, 191, 0.18);
+  --danger-color: #f87171;
+  --ctrl-bg: rgba(15, 28, 46, 0.9);
+  --ctrl-border: #3d526b;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+  font-family: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Main App Shell: Phone Portrait (Chart top <=68%, Panel bottom) */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.chart-area {
+  position: relative;
+  width: 100%;
+  height: 58dvh;
+  max-height: 68dvh;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1.5px solid var(--border-strong);
+}
+
+#chart-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.route-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Phone/Tablet Landscape & Wide Screens: Map is 2/3 of the screen, Panel is 1/3 */
+@media (orientation: landscape), (min-width: 820px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .chart-area {
+    width: 66.6667%;
+    flex: 2 1 66.6667%;
+    height: 100%;
+    max-height: none;
+    border-bottom: none;
+    border-right: 1.5px solid var(--border-strong);
+  }
+
+  .route-panel {
+    width: 33.3333%;
+    flex: 1 0 33.3333%;
+    max-width: 440px;
+    height: 100%;
+    padding: 10px 12px 16px;
+  }
+}
+
+/* Floating Chart Controls (+, -, FIT) */
+.chart-zoom-controls {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 10;
+}
+
+.chart-ctrl-btn {
+  width: 38px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--ctrl-border);
+  background: var(--ctrl-bg);
+  color: var(--text-primary);
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(6px);
+  transition: transform 0.08s ease, background-color 0.15s ease;
+}
+
+.chart-ctrl-btn.fit-btn {
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+}
+
+.chart-ctrl-btn:active {
+  transform: scale(0.95);
+}
+
+/* Bottom-left Chart Status & GPS/Theme Bar */
+.chart-bottom-bar {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.status-pill,
+.gps-pill-btn,
+.theme-pill-btn {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 5px;
+  border: 1px solid var(--ctrl-border);
+  background: var(--ctrl-bg);
+  color: var(--text-primary);
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(6px);
+}
+
+.status-pill.ready {
+  color: var(--accent-teal);
+}
+
+.gps-pill-btn,
+.theme-pill-btn {
+  cursor: pointer;
+}
+
+.gps-pill-btn.active {
+  background: var(--accent-teal);
+  color: #ffffff;
+  border-color: var(--accent-teal);
+}
+
+/* Panel Header */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-title {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
+}
+
+.panel-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 9px 10px;
+}
+
+.section-heading {
+  display: block;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* 1. Speed Section (Reduced ~20% in size) */
+.speed-section {
+  padding: 7px 9px;
+}
+
+.speed-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.speed-label-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.speed-readout {
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  line-height: 1.1;
+}
+
+.speed-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speed-number-box {
+  width: 54px;
+  height: 25px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.unit-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.speed-slider {
+  width: 100%;
+  height: 18px;
+  margin: 1px 0 4px;
+  accent-color: var(--accent-orange);
+  cursor: pointer;
+}
+
+.speed-presets-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.presets-caption {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.preset-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.preset-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.preset-btn.active {
+  background: var(--accent-orange);
+  color: #ffffff;
+  border-color: var(--accent-orange);
+}
+
+/* 2. Totals Grid (3 Tiles) */
+.totals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  padding: 7px;
+}
+
+.total-tile {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tile-label {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.tile-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.tile-value {
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tile-unit {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 3. Legs Table */
+.legs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legs-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 18px;
+}
+
+.canal-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  cursor: pointer;
+}
+
+.canal-toggle-label input {
+  accent-color: var(--accent-orange);
+  cursor: pointer;
+}
+
+.legs-table-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 5px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+}
+
+.legs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.legs-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1;
+}
+
+.legs-table th.col-dist,
+.legs-table th.col-time,
+.legs-table td.col-dist,
+.legs-table td.col-time {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.legs-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.legs-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.legs-table td {
+  padding: 6px 7px;
+  vertical-align: middle;
+}
+
+.stop-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.stop-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 99px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.stop-num.is-port {
+  background: var(--accent-orange);
+}
+
+.stop-num.is-wp {
+  background: var(--accent-teal);
+}
+
+.stop-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stop-name.editable-wp {
+  border-bottom: 1px dashed var(--accent-teal);
+  cursor: pointer;
+}
+
+.start-badge {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-orange-soft);
+  color: var(--accent-orange);
+}
+
+.stop-coords {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  padding-left: 22px;
+}
+
+.routing-text {
+  color: var(--accent-orange);
+  font-style: italic;
+}
+
+.remove-stop-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove-stop-btn:hover {
+  background: rgba(185, 28, 28, 0.12);
+  color: var(--danger-color);
+}
+
+.legs-empty-state {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* 4. Route Controls Row */
+.route-controls-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  padding: 7px;
+}
+
+.ctrl-action-btn {
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: "Barlow", sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+
+.ctrl-action-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.ctrl-action-btn.danger-btn:not(:disabled):hover {
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+/* 5. Add Port Dropdown */
+.add-port-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.port-dropdown {
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: "Barlow", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 6. Disclaimer Footer */
+.panel-disclaimer {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  padding: 2px;
+}
+
+.panel-disclaimer strong {
+  color: var(--text-secondary);
+}
